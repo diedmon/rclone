@@ -316,11 +316,11 @@ func (s *syncCopyMove) pairRenamer(in *pipe, out *pipe, wg *sync.WaitGroup) {
 }
 
 // pairCopyOrMove reads Objects on in and moves or copies them.
-func (s *syncCopyMove) pairCopyOrMove(ctx context.Context, in *pipe, fdst fs.Fs, wg *sync.WaitGroup) {
+func (s *syncCopyMove) pairCopyOrMove(ctx context.Context, in *pipe, fdst fs.Fs, fraction int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	var err error
 	for {
-		pair, ok := in.Get(s.ctx)
+		pair, ok := in.GetMax(s.ctx, fraction)
 		if !ok {
 			return
 		}
@@ -353,7 +353,8 @@ func (s *syncCopyMove) stopCheckers() {
 func (s *syncCopyMove) startTransfers() {
 	s.transfersWg.Add(fs.Config.Transfers)
 	for i := 0; i < fs.Config.Transfers; i++ {
-		go s.pairCopyOrMove(s.ctx, s.toBeUploaded, s.fdst, &s.transfersWg)
+		fraction := (100 * i) / fs.Config.Transfers
+		go s.pairCopyOrMove(s.ctx, s.toBeUploaded, s.fdst, fraction, &s.transfersWg)
 	}
 }
 
